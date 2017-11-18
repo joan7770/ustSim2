@@ -259,6 +259,8 @@ void exStage(stateType* state){
 
 /*------------------ MEM stage ----------------- */
 void memStage(stateType* state){
+	int instr = state->EXMEM.instr;
+	state->MEMWB.instr = instr;
 	
 }
 
