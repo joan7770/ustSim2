@@ -175,6 +175,7 @@ void printState(stateType *statePtr){ int i;
 /*------------------ IF stage ----------------- */
 void ifStage(stateType* state){
 	state->IFID = (IFIDType){.instr = state->instrMem[state->pc], .pcPlus1 = state->pc + 1};
+	state->fetched++;
 }
 
 /*------------------ ID stage ----------------- */
@@ -247,6 +248,7 @@ void exStage(stateType* state){
 		// ZD
 		if(aluResult){
 			// branch
+			state->branches++;
 			state->pc = branchTarget;
 		}
 	}
@@ -285,19 +287,23 @@ void run(stateType* state){
 			printf("total of %d instructions retured\n", state->retired);
 			printf("total of %d branches executed\n", state->branches);
 			printf("total of %d branch mispredictions\n", state->mispreds);
-			exit(0);
+			exit(EXIT_SUCCESS);
 		}
 		newState = state;
 		newState->cycles++;
-		
+		newState->branches = state->branches;
 		/*------------------ IF stage ----------------- */
 		ifStage(newState);
+		
 		/*------------------ ID stage ----------------- */
 		idStage(newState);
+		
 		/*------------------ EX stage ----------------- */
 		exStage(newState);
+		
 		/*------------------ MEM stage ----------------- */
 		memStage(newState);
+		
 		/*------------------ WB stage ----------------- */
 		wbStage(newState);
 		
@@ -325,7 +331,7 @@ int main(int argc, char** argv){
 		strcat(fname, argv[1]);
 	}else{
 		printf("Please run this program correctly\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	FILE *fp = fopen(fname, "r");
