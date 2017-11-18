@@ -1,0 +1,21 @@
+Compilation: 
+	make
+Run: 
+	./simulator testx
+	./simulator multiplication
+	x indicates the machine code test file under the test_suite directory.
+	
+simulator.c
+	The simulator takes in a machine code file and prints the contents at the memory locations defined. 
+
+Makefile
+	The Makefile compiles the code into the proper files. It includes a clean rule.
+	
+multiplication:
+	This test case multiples two numbers and stores the product in register 7.
+
+test1.mc:
+	This test case assesses the add, lw, beq, noop, and halt instructions.
+
+test2.mc:
+	This test case assesses the nand, sw, and jalr instructions.
