@@ -215,33 +215,33 @@ void exStage(stateType* state){
 	int branchTarget = state->IDEX.pcPlus1 + offset;
 	state->EXMEM.branchTarget = branchTarget;
 	
-	if(opcode(instr) == ADD){
+	if(opcode(instr) == ADD){// ADD
 		// Add
 		aluResult = regA + regB;
 		// Save result
 		state->reg[field2(instr)] = aluResult;
 	}
-	// NAND
-	else if(opcode(instr) == NAND){
+	
+	else if(opcode(instr) == NAND){// NAND
 		// NAND
 		aluResult = ~(regA & regB);
 		// Save result
 		state->reg[field2(instr)] = aluResult;
 	}
-	// LW or SW
-	else if(opcode(instr) == LW || opcode(instr) == SW){
+	
+	else if(opcode(instr) == LW || opcode(instr) == SW){// LW or SW
 		// Calculate memory address
 		aluResult = regB + offset;
-		if(opcode(instr) == LW){
+		if(opcode(instr) == LW){//LW
 			// Load
 			state->reg[field0(instr)] = state->instrMem[aluResult];
-		}else if(opcode(instr) == SW){
+		}else if(opcode(instr) == SW){//SW
 			// Store
 			state->instrMem[aluResult] = regA;
 		}
 	}
-	// BEQ
-	else if(opcode(instr) == BEQ){
+	
+	else if(opcode(instr) == BEQ){// BEQ
 		// Calculate condition
 		aluResult = (regA == regB);
 		
@@ -254,7 +254,7 @@ void exStage(stateType* state){
 	}
 	
 	state->EXMEM.aluResult = aluResult;
-	//state->EXMEM.readReg = 0;
+	//state->EXMEM.readReg = 0; //what is this for?
 }
 
 /*------------------ MEM stage ----------------- */
