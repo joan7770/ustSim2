@@ -192,24 +192,67 @@ void idStage(stateType* state){
 	else if(opcode(instr) == LW || opcode(instr) == SW || opcode(instr) == BEQ){
 		offset = signExtend(field2(state->IFID.instr));
 	}
-	else if (opcode(instr) == JALR){
-		
-	}
-	else if (opcode(instr) == HALT){
-		
-	}
-	else if (opcode(instr) == NOOP){
-		instr = NOOPINSTRUCTION;
+	else{
+		//no need to do anything else
 	}
 	state->IDEX.instr = instr;
 	state->IDEX.offset = offset;
 	state->IDEX.readRegA = regA;
 	state->IDEX.readRegB = regB;
+	state->IDEX.pcPlus1 = state->IFID.pcPlus1;
 }
 
 /*------------------ EX stage ----------------- */
 void exStage(stateType* state){
+	int instr = state->IDEX.instr;
+	state->EXMEM.instr = instr;
 	
+	int regA = state->reg[state->IDEX.readRegA];
+	int regB = state->reg[state->IDEX.readRegB];
+	int offset = state->IDEX.offset;
+	int aluResult = 0;
+	int branchTarget = state->IDEX.pcPlus1 + offset;
+	state->EXMEM.branchTarget = branchTarget;
+	
+	if(opcode(instr) == ADD){
+		// Add
+		aluResult = regA + regB;
+		// Save result
+		state->reg[field2(instr)] = aluResult;
+	}
+	// NAND
+	else if(opcode(instr) == NAND){
+		// NAND
+		aluResult = ~(regA & regB);
+		// Save result
+		state->reg[field2(instr)] = aluResult;
+	}
+	// LW or SW
+	else if(opcode(instr) == LW || opcode(instr) == SW){
+		// Calculate memory address
+		aluResult = regB + offset;
+		if(opcode(instr) == LW){
+			// Load
+			state->reg[field0(instr)] = state->instrMem[aluResult];
+		}else if(opcode(instr) == SW){
+			// Store
+			state->instrMem[aluResult] = regA;
+		}
+	}
+	// BEQ
+	else if(opcode(instr) == BEQ){
+		// Calculate condition
+		aluResult = (regA == regB);
+		
+		// ZD
+		if(aluResult){
+			// branch
+			state->pc = branchTarget;
+		}
+	}
+	
+	state->EXMEM.aluResult = aluResult;
+	//state->EXMEM.readReg = 0;
 }
 
 /*------------------ MEM stage ----------------- */
