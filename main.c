@@ -323,7 +323,11 @@ void wbStage(stateType* oldState, stateType* newState){
 	int writeReg = 1;
 	int op = opcode(instr);
 
-	if(op == ADD || op == NAND || op == LW){
+	if(op == ADD || op == NAND){
+		writeReg = field2(instr);
+		newState->reg[writeReg] = writeData;
+	}
+	else if(op == LW){
 		writeReg = field0(instr);
 		newState->reg[writeReg] = writeData;
 	}
