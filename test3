@@ -1,0 +1,12 @@
+	lw	2	0	data1
+	lw	3	0	data2
+	noop
+	noop
+	noop
+	noop
+	noop
+	add	1	2	3
+	nand	5	1	3
+	halt
+data1	.fill	5
+data2	.fill	-1
