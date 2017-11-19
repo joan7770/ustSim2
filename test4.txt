@@ -1,0 +1,8 @@
+	lw	2	0	data1
+	lw	3	0	data2
+	add	1	2	3
+	beq	1	0	end
+	add	1	2	3
+end	halt
+data1	.fill	5
+data2	.fill	-1
