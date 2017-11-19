@@ -1,5 +1,10 @@
 	lw	2	0	data1
 	lw	3	0	data2
+	noop
+	noop
+	noop
+	noop
+	noop
 	add	1	2	3
 	beq	1	0	end
 	add	1	2	3
