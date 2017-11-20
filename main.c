@@ -269,6 +269,7 @@ int main(int argc, char** argv){
 		/* note that fgets doesn't strip the terminating \n, checking its
 		   presence would allow to handle lines longer that sizeof(line) */
 		state->instrMem[i] = atoi(line);
+		state->dataMem[i] = atoi(line);
 		i++;
 	}
 
@@ -293,7 +294,7 @@ void run(stateType* state, stateType* newState){
 			printf("machine halted\n");
 			printf("total of %d cycles executed\n", state->cycles);
 			printf("total of %d instructions fetched\n", state->fetched);
-			printf("total of %d instructions retured\n", state->retired);
+			printf("total of %d instructions retired\n", state->retired);
 			printf("total of %d branches executed\n", state->branches);
 			printf("total of %d branch mispredictions\n", state->mispreds);
 			exit(EXIT_SUCCESS);
@@ -346,6 +347,7 @@ void ifStage(stateType* oldState, stateType* newState){
 		}
 	}
 	else{
+		newState->fetched++;
 		++pc;
 	}
 	
