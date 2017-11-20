@@ -227,6 +227,7 @@ int main(int argc, char** argv){
 	//state initialization
 	stateType* state = (stateType*)malloc(sizeof(stateType));
 	memset(state->instrMem, 0, NUMMEMORY*sizeof(int));
+	memset(state->dataMem, 0, NUMMEMORY*sizeof(int));
 	memset(state->reg, 0, NUMREGS * sizeof(int));
 	
 	state->pc = 0;
@@ -245,6 +246,7 @@ int main(int argc, char** argv){
 	//newState initialization
 	stateType* newState = (stateType*)malloc(sizeof(stateType));
 	memset(newState->instrMem, 0, NUMMEMORY * sizeof(int));
+	memset(newState->dataMem, 0, NUMMEMORY*sizeof(int));
 	memset(newState->reg, 0, NUMREGS * sizeof(int));
 	
 	newState->pc = 0;
