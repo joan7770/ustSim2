@@ -283,10 +283,8 @@ int main(int argc, char** argv){
 /*------------------ Simulator ------------------*/
 void run(stateType* state, stateType* newState){
 	
-	int total_instrs = 0;
-	
 	// Primary loop
-	while(true){ //change later?
+	while(true){
 		printState(state);
 		/* check for halt */
 		if(HALT == opcode(state->MEMWB.instr)) {
@@ -298,7 +296,7 @@ void run(stateType* state, stateType* newState){
 			printf("total of %d branch mispredictions\n", state->mispreds);
 			exit(EXIT_SUCCESS);
 		}
-		*newState = *state;
+		newState = state;
 		newState->cycles++;
 		
 		/*------------------ IF stage ----------------- */
@@ -312,7 +310,7 @@ void run(stateType* state, stateType* newState){
 		/*------------------ WB stage ----------------- */
 		wbStage(state, newState);
 		
-		*state = *newState; /* this is the last statement before the end of the loop. It marks the end of the cycle and updates the current state with the values calculated in this cycle – AKA “Clock Tick”. */
+		state = newState; /* this is the last statement before the end of the loop. It marks the end of the cycle and updates the current state with the values calculated in this cycle – AKA “Clock Tick”. */
 	}
 }
 
