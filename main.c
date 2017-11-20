@@ -26,6 +26,7 @@
 #define NOOPINSTRUCTION 0x1c00000
 
 
+/*------------------ Given Code ------------------*/
 int field0(int instruction){
 	return( (instruction>>19) & 0x7);
 }
@@ -97,13 +98,6 @@ typedef struct statestruct{
 	MEMWBType MEMWB;
 	WBENDType WBEND;
 } stateType;
-
-int signExtend(int num);
-void ifStage(stateType* state, stateType* newState);
-void idStage(stateType* state, stateType* newState);
-void exStage(stateType* state, stateType* newState);
-void memStage(stateType* state, stateType* newState);
-void wbStage(stateType* state, stateType* newState);
 
 
 void printInstruction(int instr) {
@@ -179,170 +173,25 @@ void printState(stateType *statePtr){ int i;
 	printf("\t\twriteData %d\n", statePtr->WBEND.writeData);
 }
 
-/*------------------ IF stage ----------------- */
-void ifStage(stateType* oldState, stateType* newState){
-	int pc = oldState->pc;
-	int instr = oldState->instrMem[pc];
+/*------------------ end of given code ------------------ */
 
-	if(opcode(oldState->IFID.instr) == LW){
-		if(opcode(instr) == ADD || opcode(instr) == NAND){
-			if(field1(instr) == field0(oldState->IFID.instr)){
-				instr = NOOPINSTRUCTION;
-			}
-			else if(field2(instr) == field0(oldState->IFID.instr)){
-				instr = NOOPINSTRUCTION;
-			}
-			else{
-				++pc;
-			}
-		}
-		else if(opcode(instr) == BEQ){
-			if(field0(instr) == field0(oldState->IFID.instr)){
-				instr = NOOPINSTRUCTION;
-			}
-			else if(field1(instr) == field0(oldState->IFID.instr)){
-				instr = NOOPINSTRUCTION;
-			}
-			else{
-				++pc;
-			}
-		}
-	}
-	else{
-		++pc;
-	}
-		
+/*------------------ Function declarions ------------------*/
+int signExtend(int num);
+void ifStage(stateType* state, stateType* newState);
+void idStage(stateType* state, stateType* newState);
+void exStage(stateType* state, stateType* newState);
+void memStage(stateType* state, stateType* newState);
+void wbStage(stateType* state, stateType* newState);
+int dataForward(stateType* state);
 
-	newState->IFID.instr = instr;
-	newState->IFID.pcPlus1 = pc;
-	newState->pc = pc;
-}
-
-/*------------------ ID stage ----------------- */
-void idStage(stateType* oldState, stateType* newState){
-
-	int instr = oldState->IFID.instr;
-	int pcPlus1 = oldState->IFID.pcPlus1;
-	int readRegA = 0;
-	int readRegB = 0;
-	int offset = 0;
-
-	//ADD or NAND
-	if(opcode(instr) == ADD || opcode(instr) == NAND){
-		readRegA = oldState->reg[field1(instr)];
-		readRegB = oldState->reg[field2(instr)];
-	}
-	// LW or SW or BEQ
-	else if(opcode(instr) == LW || opcode(instr) == SW || opcode(instr) == BEQ){
-		readRegA = oldState->reg[field0(instr)];
-		readRegB = oldState->reg[field1(instr)];
-		offset = signExtend(field2(instr));
-	}
-
-	newState->IDEX.instr = instr;
-	newState->IDEX.pcPlus1 = pcPlus1;
-	newState->IDEX.offset = offset;
-	newState->IDEX.readRegA = readRegA;
-	newState->IDEX.readRegB = readRegB;
-}
-
-/*------------------ EX stage ----------------- */
-void exStage(stateType* oldState, stateType* newState){
-
-	int instr = oldState->IDEX.instr;
-	int pcPlus1 = oldState->IDEX.pcPlus1;
-	int readRegA = oldState->IDEX.readRegA;
-	int readRegB = oldState->IDEX.readRegB;
-	int offset = oldState->IDEX.offset;
-	int aluResult = 0;
-	int branchTarget = 0;
-	int readReg = 0;
-	int op = opcode(instr);
-
-	if(op == ADD || op == NAND){
-		if(op == ADD){
-			aluResult = readRegA + readRegB;
-		}
-		else{
-			aluResult = ~(readRegA & readRegB);
-		}
-	}
-	else if(op == LW || op == SW){
-		aluResult = readRegB + offset;
-		readReg = readRegA;
-	}
-	else if(op == BEQ){
-		aluResult = readRegA - readRegB;
-		branchTarget = offset + pcPlus1;
-	}
-
-	newState->EXMEM.instr = instr;
-	newState->EXMEM.aluResult = aluResult;
-	newState->EXMEM.branchTarget = branchTarget;
-	newState->EXMEM.readReg = readReg;
-}
-
-/*------------------ MEM stage ----------------- */
-void memStage(stateType* oldState, stateType* newState){
-
-	int instr = oldState->EXMEM.instr;
-	int branchTarget = oldState->EXMEM.branchTarget;
-	int aluResult = oldState->EXMEM.aluResult;
-	int readReg = oldState->EXMEM.readReg;
-	int op = opcode(instr);
-	int pc = oldState->pc;
-	int writeData = 0;
-
-	if(op == BEQ){
-		if(aluResult == 0){
-			pc = branchTarget;
-			newState->IFID.instr = NOOPINSTRUCTION;
-			newState->IDEX.instr = NOOPINSTRUCTION;
-			newState->EXMEM.instr = NOOPINSTRUCTION;
-		}
-	}
-	else if(op == LW){
-		writeData = oldState->dataMem[aluResult];
-	}
-	else if(op == SW){
-		oldState->dataMem[aluResult] = readReg;
-	}
-	else if(op == ADD || op == NAND){
-		writeData = aluResult;
-	}
-	
-	newState->MEMWB.instr = instr;
-	newState->MEMWB.writeData = writeData;
-}
-
-/*------------------ WB stage ----------------- */
-void wbStage(stateType* oldState, stateType* newState){
-
-	int instr = oldState->MEMWB.instr;
-	int writeData = oldState->MEMWB.writeData;
-	int writeReg = 1;
-	int op = opcode(instr);
-
-	if(op == ADD || op == NAND){
-		writeReg = field2(instr);
-		newState->reg[writeReg] = writeData;
-	}
-	else if(op == LW){
-		writeReg = field0(instr);
-		newState->reg[writeReg] = writeData;
-	}
-
-	newState->WBEND.instr = instr;
-	newState->WBEND.writeData = writeData;
-}
-
+/*------------------ Simulator ------------------*/
 void run(stateType* state, stateType* newState){
-
+	
 	// Reused variables;
 	int branchTarget = 0;
 	int aluResult = 0;
 	int total_instrs = 0;
-
+	
 	// Primary loop
 	int k = 0;
 	while(k<5){
@@ -360,7 +209,7 @@ void run(stateType* state, stateType* newState){
 		}
 		*newState = *state;
 		newState->cycles++;
-
+		
 		/*------------------ IF stage ----------------- */
 		ifStage(state, newState);
 		/*------------------ ID stage ----------------- */
@@ -371,7 +220,7 @@ void run(stateType* state, stateType* newState){
 		memStage(state, newState);
 		/*------------------ WB stage ----------------- */
 		wbStage(state, newState);
-
+		
 		*state = *newState; /* this is the last statement before the end of the loop. It marks the end of the cycle and updates the current state with the values calculated in this cycle – AKA “Clock Tick”. */
 	}
 }
@@ -465,4 +314,222 @@ int main(int argc, char** argv){
 
 	free(state);
 	free(fname);
+}
+
+/*------------------ IF stage ----------------- */
+void ifStage(stateType* oldState, stateType* newState){
+	int pc = oldState->pc;
+	int instr = oldState->instrMem[pc];
+	
+	if(opcode(oldState->IFID.instr) == LW){
+		if(opcode(instr) == ADD || opcode(instr) == NAND){
+			if(field1(instr) == field0(oldState->IFID.instr)){
+				instr = NOOPINSTRUCTION;
+			}
+			else if(field2(instr) == field0(oldState->IFID.instr)){
+				instr = NOOPINSTRUCTION;
+			}
+			else{
+				++pc;
+			}
+		}
+		else if(opcode(instr) == BEQ){
+			if(field0(instr) == field0(oldState->IFID.instr)){
+				instr = NOOPINSTRUCTION;
+			}
+			else if(field1(instr) == field0(oldState->IFID.instr)){
+				instr = NOOPINSTRUCTION;
+			}
+			else{
+				++pc;
+			}
+		}
+	}
+	else{
+		++pc;
+	}
+	
+	
+	newState->IFID.instr = instr;
+	newState->IFID.pcPlus1 = pc;
+	newState->pc = pc;
+}
+
+/*------------------ ID stage ----------------- */
+void idStage(stateType* oldState, stateType* newState){
+	
+	int instr = oldState->IFID.instr;
+	int pcPlus1 = oldState->IFID.pcPlus1;
+	int readRegA = 0;
+	int readRegB = 0;
+	int offset = 0;
+	
+	//ADD or NAND
+	if(opcode(instr) == ADD || opcode(instr) == NAND){
+		readRegA = oldState->reg[field1(instr)];
+		readRegB = oldState->reg[field2(instr)];
+	}
+	// LW or SW or BEQ
+	else if(opcode(instr) == LW || opcode(instr) == SW || opcode(instr) == BEQ){
+		readRegA = oldState->reg[field0(instr)];
+		readRegB = oldState->reg[field1(instr)];
+		offset = signExtend(field2(instr));
+	}
+	
+	newState->IDEX.instr = instr;
+	newState->IDEX.pcPlus1 = pcPlus1;
+	newState->IDEX.offset = offset;
+	newState->IDEX.readRegA = readRegA;
+	newState->IDEX.readRegB = readRegB;
+}
+
+/*------------------ EX stage ----------------- */
+void exStage(stateType* oldState, stateType* newState){
+	
+	int instr = oldState->IDEX.instr;
+	int pcPlus1 = oldState->IDEX.pcPlus1;
+	int readRegA = oldState->IDEX.readRegA;
+	int readRegB = oldState->IDEX.readRegB;
+	int offset = oldState->IDEX.offset;
+	int aluResult = 0;
+	int branchTarget = 0;
+	int readReg = 0;
+	int op = opcode(instr);
+	
+	if(op == ADD || op == NAND){
+		if(op == ADD){
+			aluResult = readRegA + readRegB;
+		}
+		else{
+			aluResult = ~(readRegA & readRegB);
+		}
+	}
+	else if(op == LW || op == SW){
+		aluResult = readRegB + offset;
+		readReg = readRegA;
+	}
+	else if(op == BEQ){
+		aluResult = readRegA - readRegB;
+		branchTarget = offset + pcPlus1;
+	}
+	
+	newState->EXMEM.instr = instr;
+	newState->EXMEM.aluResult = aluResult;
+	newState->EXMEM.branchTarget = branchTarget;
+	newState->EXMEM.readReg = readReg;
+	
+}
+
+/*------------------ MEM stage ----------------- */
+void memStage(stateType* oldState, stateType* newState){
+	
+	int instr = oldState->EXMEM.instr;
+	int branchTarget = oldState->EXMEM.branchTarget;
+	int aluResult = oldState->EXMEM.aluResult;
+	int readReg = oldState->EXMEM.readReg;
+	int op = opcode(instr);
+	int pc = oldState->pc;
+	int writeData = 0;
+	
+	if(op == BEQ){
+		if(aluResult == 0){
+			pc = branchTarget;
+			newState->IFID.instr = NOOPINSTRUCTION;
+			newState->IDEX.instr = NOOPINSTRUCTION;
+			newState->EXMEM.instr = NOOPINSTRUCTION;
+		}
+	}
+	else if(op == LW){
+		writeData = oldState->dataMem[aluResult];
+	}
+	else if(op == SW){
+		oldState->dataMem[aluResult] = readReg;
+	}
+	else if(op == ADD || op == NAND){
+		writeData = aluResult;
+	}
+	
+	newState->MEMWB.instr = instr;
+	newState->MEMWB.writeData = writeData;
+}
+
+/*------------------ WB stage ----------------- */
+void wbStage(stateType* oldState, stateType* newState){
+	
+	int instr = oldState->MEMWB.instr;
+	int writeData = oldState->MEMWB.writeData;
+	int writeReg = 1;
+	int op = opcode(instr);
+	
+	if(op == ADD || op == NAND){
+		writeReg = field2(instr);
+		newState->reg[writeReg] = writeData;
+	}
+	else if(op == LW){
+		writeReg = field0(instr);
+		newState->reg[writeReg] = writeData;
+	}
+	
+	newState->WBEND.instr = instr;
+	newState->WBEND.writeData = writeData;
+}
+
+/*------------------ Hazard handeling ----------------- */
+int dataForward(stateType* state){
+	int regA = field0(state->IDEX.instr);
+	int regB = field1(state->IDEX.instr);
+	int op = opcode(state->IDEX.instr);
+	
+	//WBEND state
+	if(op == ADD || op == NAND){
+		if(regA == field2(state->WBEND.instr)){
+			state->IDEX.readRegA = state->WBEND.writeData;
+		}
+		else if(regB == field2(state->WBEND.instr)){
+			state->IDEX.readRegB = state->WBEND.writeData;
+		}
+	}
+	else if(op == LW ){
+		if(regA == field1(state->WBEND.instr) ) {
+			state->IDEX.readRegA = state->WBEND.writeData;
+		}
+		if(regB == field1(state->WBEND.instr) ) {
+			state->IDEX.readRegB = state->WBEND.writeData;
+		}
+	}
+	
+	//MEMWB stage
+	if(op == ADD || op == NAND){
+		if(regA == field2(state->MEMWB.instr)){
+			state->IDEX.readRegA = state->MEMWB.writeData;
+		}
+		else if(regB == field2(state->MEMWB.instr)){
+			state->IDEX.readRegB = state->MEMWB.writeData;
+		}
+	}
+	else if(op == LW ){
+		if(regA == field1(state->MEMWB.instr)) {
+			state->IDEX.readRegA = state->MEMWB.writeData;
+		}
+		if(regB == field1(state->MEMWB.instr)) {
+			state->IDEX.readRegB = state->MEMWB.writeData;
+		}
+	}
+	
+	//EXMEM stage
+	if(op == ADD || op == NAND){
+		if(regA == field2(state->EXMEM.instr)){
+			state->IDEX.readRegA = state->EXMEM.aluResult;
+		}
+		else if(regB == field2(state->EXMEM.instr)){
+			state->IDEX.readRegB = state->EXMEM.aluResult;
+		}
+	}
+	else if(op == LW ){
+		if(regA == field1(state->EXMEM.instr) || regB == field1(state->EXMEM.instr)) {
+			printf("Error the simulator should have already stalled");
+			exit(EXIT_FAILURE);
+		}
+	}
+	return 0;
 }
