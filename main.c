@@ -382,7 +382,7 @@ void idStage(stateType* oldState, stateType* newState){
 
 /*------------------ EX stage ----------------- */
 void exStage(stateType* oldState, stateType* newState){
-	dataForward(oldState); //check for hazards
+	//dataForward(oldState); //check for hazards and data forward, does not work properly
 	
 	int instr = oldState->IDEX.instr;
 	int pcPlus1 = oldState->IDEX.pcPlus1;
