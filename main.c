@@ -25,7 +25,6 @@
 
 #define NOOPINSTRUCTION 0x1c00000
 
-
 /*------------------ Given Code ------------------*/
 int field0(int instruction){
 	return( (instruction>>19) & 0x7);
@@ -184,6 +183,7 @@ void memStage(stateType* state, stateType* newState);
 void wbStage(stateType* state, stateType* newState);
 void dataForward(stateType* state);
 
+/*------------------ Main and file handeling ------------------*/
 int main(int argc, char** argv){
 	/** Get command line arguments **/
 	char* fname;
@@ -223,33 +223,37 @@ int main(int argc, char** argv){
 	}
 	// reset fp to the beginning of the file
 	rewind(fp);
-
-	stateType* state = (stateType*)malloc(sizeof(stateType));
-	stateType* newState = (stateType*)malloc(sizeof(stateType));
-
-	state->pc = 0;
-	memset(state->instrMem, 0, NUMMEMORY*sizeof(int));
-	memset(state->reg, 0, NUMREGS*sizeof(int));
-
-	state->pc = 0;
-	memset(state->instrMem, 0, NUMMEMORY * sizeof(int));
-	memset(state->instrMem, 0, NUMMEMORY * sizeof(int));
-	memset(state->reg, 0, NUMREGS * sizeof(int));
-	state->numMemory = line_count;
-
 	
-	newState->pc = 0;
-	memset(newState->instrMem, 0, NUMMEMORY * sizeof(int));
-	memset(newState->instrMem, 0, NUMMEMORY * sizeof(int));
-	memset(newState->reg, 0, NUMREGS * sizeof(int));
-	newState->numMemory = line_count;
-
+	//state initialization
+	stateType* state = (stateType*)malloc(sizeof(stateType));
+	memset(state->instrMem, 0, NUMMEMORY*sizeof(int));
+	memset(state->reg, 0, NUMREGS * sizeof(int));
+	
+	state->pc = 0;
+	state->cycles = 0;
+	state->fetched = 0;
+	state->retired = 0;
+	state->branches = 0;
+	state->mispreds = 0;
+	state->numMemory = line_count;
 	state->IFID.instr = NOOPINSTRUCTION;
 	state->IDEX.instr = NOOPINSTRUCTION;
 	state->EXMEM.instr = NOOPINSTRUCTION;
 	state->MEMWB.instr = NOOPINSTRUCTION;
 	state->WBEND.instr = NOOPINSTRUCTION;
-
+	
+	//newState initialization
+	stateType* newState = (stateType*)malloc(sizeof(stateType));
+	memset(newState->instrMem, 0, NUMMEMORY * sizeof(int));
+	memset(newState->reg, 0, NUMREGS * sizeof(int));
+	
+	newState->pc = 0;
+	newState->cycles = 0;
+	newState->fetched = 0;
+	newState->retired = 0;
+	newState->branches = 0;
+	newState->mispreds = 0;
+	newState->numMemory = line_count;
 	newState->IFID.instr = NOOPINSTRUCTION;
 	newState->IDEX.instr = NOOPINSTRUCTION;
 	newState->EXMEM.instr = NOOPINSTRUCTION;
@@ -279,15 +283,10 @@ int main(int argc, char** argv){
 /*------------------ Simulator ------------------*/
 void run(stateType* state, stateType* newState){
 	
-	// Reused variables;
-	int branchTarget = 0;
-	int aluResult = 0;
 	int total_instrs = 0;
 	
 	// Primary loop
-	int k = 0;
-	while(k<5){
-		++k;
+	while(true){ //change later?
 		printState(state);
 		/* check for halt */
 		if(HALT == opcode(state->MEMWB.instr)) {
@@ -349,7 +348,6 @@ void ifStage(stateType* oldState, stateType* newState){
 	else{
 		++pc;
 	}
-	
 	
 	newState->IFID.instr = instr;
 	newState->IFID.pcPlus1 = pc;
@@ -413,6 +411,7 @@ void exStage(stateType* oldState, stateType* newState){
 	else if(op == BEQ){
 		aluResult = readRegA - readRegB;
 		branchTarget = offset + pcPlus1;
+		newState->branches++;
 	}
 	
 	newState->EXMEM.instr = instr;
@@ -439,6 +438,7 @@ void memStage(stateType* oldState, stateType* newState){
 			newState->IFID.instr = NOOPINSTRUCTION;
 			newState->IDEX.instr = NOOPINSTRUCTION;
 			newState->EXMEM.instr = NOOPINSTRUCTION;
+			newState->mispreds++;
 		}
 	}
 	else if(op == LW){
@@ -474,6 +474,7 @@ void wbStage(stateType* oldState, stateType* newState){
 	
 	newState->WBEND.instr = instr;
 	newState->WBEND.writeData = writeData;
+	newState->retired++;
 }
 
 /*------------------ Hazard handeling ----------------- */

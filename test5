@@ -1,0 +1,9 @@
+	lw	1	0	one
+	lw	2	0	two
+	lw	3	0	three
+	add	4	1	0
+	nand	5	2	3
+	halt
+one	.fill	1
+two	.fill	2
+three	.fill	3
