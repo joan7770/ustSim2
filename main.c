@@ -172,58 +172,17 @@ void printState(stateType *statePtr){ int i;
 	printf("\t\tinstruction "); printInstruction(statePtr->WBEND.instr);
 	printf("\t\twriteData %d\n", statePtr->WBEND.writeData);
 }
-
 /*------------------ end of given code ------------------ */
 
 /*------------------ Function declarions ------------------*/
 int signExtend(int num);
+void run(stateType* state, stateType* newState);
 void ifStage(stateType* state, stateType* newState);
 void idStage(stateType* state, stateType* newState);
 void exStage(stateType* state, stateType* newState);
 void memStage(stateType* state, stateType* newState);
 void wbStage(stateType* state, stateType* newState);
-int dataForward(stateType* state);
-
-/*------------------ Simulator ------------------*/
-void run(stateType* state, stateType* newState){
-	
-	// Reused variables;
-	int branchTarget = 0;
-	int aluResult = 0;
-	int total_instrs = 0;
-	
-	// Primary loop
-	int k = 0;
-	while(k<5){
-		++k;
-		printState(state);
-		/* check for halt */
-		if(HALT == opcode(state->MEMWB.instr)) {
-			printf("machine halted\n");
-			printf("total of %d cycles executed\n", state->cycles);
-			printf("total of %d instructions fetched\n", state->fetched);
-			printf("total of %d instructions retured\n", state->retired);
-			printf("total of %d branches executed\n", state->branches);
-			printf("total of %d branch mispredictions\n", state->mispreds);
-			exit(0);
-		}
-		*newState = *state;
-		newState->cycles++;
-		
-		/*------------------ IF stage ----------------- */
-		ifStage(state, newState);
-		/*------------------ ID stage ----------------- */
-		idStage(state, newState);
-		/*------------------ EX stage ----------------- */
-		exStage(state, newState);
-		/*------------------ MEM stage ----------------- */
-		memStage(state, newState);
-		/*------------------ WB stage ----------------- */
-		wbStage(state, newState);
-		
-		*state = *newState; /* this is the last statement before the end of the loop. It marks the end of the cycle and updates the current state with the values calculated in this cycle – AKA “Clock Tick”. */
-	}
-}
+void dataForward(stateType* state);
 
 int main(int argc, char** argv){
 	/** Get command line arguments **/
@@ -245,7 +204,7 @@ int main(int argc, char** argv){
 		strcat(fname, argv[1]);
 	}else{
 		printf("Please run this program correctly\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	FILE *fp = fopen(fname, "r");
@@ -313,7 +272,49 @@ int main(int argc, char** argv){
 	run(state, newState);
 
 	free(state);
+	free(newState);
 	free(fname);
+}
+
+/*------------------ Simulator ------------------*/
+void run(stateType* state, stateType* newState){
+	
+	// Reused variables;
+	int branchTarget = 0;
+	int aluResult = 0;
+	int total_instrs = 0;
+	
+	// Primary loop
+	int k = 0;
+	while(k<5){
+		++k;
+		printState(state);
+		/* check for halt */
+		if(HALT == opcode(state->MEMWB.instr)) {
+			printf("machine halted\n");
+			printf("total of %d cycles executed\n", state->cycles);
+			printf("total of %d instructions fetched\n", state->fetched);
+			printf("total of %d instructions retured\n", state->retired);
+			printf("total of %d branches executed\n", state->branches);
+			printf("total of %d branch mispredictions\n", state->mispreds);
+			exit(EXIT_SUCCESS);
+		}
+		*newState = *state;
+		newState->cycles++;
+		
+		/*------------------ IF stage ----------------- */
+		ifStage(state, newState);
+		/*------------------ ID stage ----------------- */
+		idStage(state, newState);
+		/*------------------ EX stage ----------------- */
+		exStage(state, newState);
+		/*------------------ MEM stage ----------------- */
+		memStage(state, newState);
+		/*------------------ WB stage ----------------- */
+		wbStage(state, newState);
+		
+		*state = *newState; /* this is the last statement before the end of the loop. It marks the end of the cycle and updates the current state with the values calculated in this cycle – AKA “Clock Tick”. */
+	}
 }
 
 /*------------------ IF stage ----------------- */
@@ -385,6 +386,7 @@ void idStage(stateType* oldState, stateType* newState){
 
 /*------------------ EX stage ----------------- */
 void exStage(stateType* oldState, stateType* newState){
+	dataForward(oldState); //check for hazards
 	
 	int instr = oldState->IDEX.instr;
 	int pcPlus1 = oldState->IDEX.pcPlus1;
@@ -475,7 +477,7 @@ void wbStage(stateType* oldState, stateType* newState){
 }
 
 /*------------------ Hazard handeling ----------------- */
-int dataForward(stateType* state){
+void dataForward(stateType* state){
 	int regA = field0(state->IDEX.instr);
 	int regB = field1(state->IDEX.instr);
 	int op = opcode(state->IDEX.instr);
@@ -531,5 +533,4 @@ int dataForward(stateType* state){
 			exit(EXIT_FAILURE);
 		}
 	}
-	return 0;
 }
